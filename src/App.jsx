@@ -4,6 +4,9 @@ import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import './App.css';
 
+// Import your new admin dashboard
+import AdminOrders from './pages/AdminOrders';
+
 function Navbar() {
   const { getCartCount } = useCart();
   const cartCount = getCartCount();
@@ -29,6 +32,9 @@ function Navbar() {
           <li className="nav-item">
             <Link to="/orders" className="nav-link">Orders</Link>
           </li>
+          <li className="nav-item">
+            <Link to="/admin/orders" className="nav-link">Admin Orders</Link>
+          </li>
         </ul>
       </div>
     </nav>
@@ -49,6 +55,7 @@ function App() {
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/menu" element={<MenuPlaceholder />} />
               <Route path="/orders" element={<OrdersPlaceholder />} />
+              <Route path="/admin/orders" element={<AdminOrders />} />
             </Routes>
           </main>
         </div>
