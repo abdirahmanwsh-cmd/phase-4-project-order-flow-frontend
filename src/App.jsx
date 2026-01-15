@@ -6,6 +6,8 @@ import './App.css';
 
 // Import your new admin dashboard
 import AdminOrders from './pages/AdminOrders';
+import MenuBrowse from './pages/MenuBrowse';          // ← added
+import AdminMenuManager from './pages/AdminMenuManager'; // ← added
 
 function Navbar() {
   const { getCartCount } = useCart();
@@ -35,6 +37,10 @@ function Navbar() {
           <li className="nav-item">
             <Link to="/admin/orders" className="nav-link">Admin Orders</Link>
           </li>
+          {/* Optional: Add admin menu link if needed */}
+          {/* <li className="nav-item">
+            <Link to="/admin/menu" className="nav-link">Admin Menu</Link>
+          </li> */}
         </ul>
       </div>
     </nav>
@@ -53,9 +59,10 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/checkout" element={<Checkout />} />
-              <Route path="/menu" element={<MenuPlaceholder />} />
+              <Route path="/menu" element={<MenuBrowse />} /> {/* ← updated */}
               <Route path="/orders" element={<OrdersPlaceholder />} />
               <Route path="/admin/orders" element={<AdminOrders />} />
+              <Route path="/admin/menu" element={<AdminMenuManager />} /> {/* ← added */}
             </Routes>
           </main>
         </div>
@@ -108,13 +115,6 @@ const HomePage = () => (
         <Link to="/menu" className="promo-link">Order Now</Link>
       </div>
     </section>
-  </div>
-);
-
-const MenuPlaceholder = () => (
-  <div className="placeholder-page">
-    <h1>Menu</h1>
-    <p>Coming soon</p>
   </div>
 );
 
