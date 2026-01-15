@@ -108,6 +108,12 @@
   box-shadow: 0 8px 20px rgba(45, 106, 79, 0.4);
 }
 
+.place-order-btn:disabled {
+  background: #95d5b2;
+  cursor: not-allowed;
+  transform: none;
+}
+
 .order-summary {
   background: white;
   padding: 2rem;

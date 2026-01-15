@@ -2,6 +2,7 @@ import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import { CartProvider, useCart } from './contexts/CartContext';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
+import OrderConfirmation from './pages/OrderConfirmation';
 import './App.css';
 
 function Navbar() {
@@ -47,6 +48,7 @@ function App() {
               <Route path="/" element={<HomePage />} />
               <Route path="/cart" element={<Cart />} />
               <Route path="/checkout" element={<Checkout />} />
+              <Route path="/order-confirmation" element={<OrderConfirmation />} />
               <Route path="/menu" element={<MenuPlaceholder />} />
               <Route path="/orders" element={<OrdersPlaceholder />} />
             </Routes>

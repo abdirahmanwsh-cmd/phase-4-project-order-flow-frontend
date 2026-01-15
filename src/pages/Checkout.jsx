@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
+import api from '../services/api';
 import './Checkout.css';
 
 const Checkout = () => {
@@ -16,6 +17,7 @@ const Checkout = () => {
   });
 
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   const subtotal = getCartTotal();
   const deliveryFee = 100;
@@ -66,17 +68,40 @@ const Checkout = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmitOrder = (e) => {
+  const handleSubmitOrder = async (e) => {
     e.preventDefault();
 
     if (!validateForm()) {
       return;
     }
 
-    console.log('Order:', { formData, items: cartItems, total });
-    alert('Order placed successfully!');
-    clearCart();
-    navigate('/');
+    setIsSubmitting(true);
+
+    try {
+      const orderData = {
+        customer_name: formData.fullName,
+        phone: formData.phone,
+        email: formData.email,
+        address: formData.address,
+        city: formData.city,
+        items: cartItems.map(item => ({
+          menu_item_id: item.id,
+          quantity: item.quantity,
+          price: item.price
+        })),
+        total: total
+      };
+
+      const response = await api.createOrder(orderData);
+      
+      clearCart();
+      navigate(`/order-confirmation?order_id=${response.order_id}`);
+    } catch (error) {
+      console.error('Order failed:', error);
+      alert('Failed to place order. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (cartItems.length === 0) {
@@ -176,8 +201,9 @@ const Checkout = () => {
             <button 
               type="submit" 
               className="place-order-btn"
+              disabled={isSubmitting}
             >
-              Place Order - KES {total.toFixed(2)}
+              {isSubmitting ? 'Placing Order...' : `Place Order - KES ${total.toFixed(2)}`}
             </button>
           </form>
 
