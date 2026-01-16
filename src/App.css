@@ -4,6 +4,14 @@
   box-sizing: border-box;
 }
 
+/* ADDED: Menu grid layout */
+.menu-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 24px;
+  padding: 20px;
+}
+
 #root {
   min-height: 100vh;
   background: #f8f9fa;

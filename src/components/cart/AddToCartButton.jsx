@@ -2,19 +2,28 @@ import { useState } from 'react';
 import { useCart } from '../../contexts/CartContext';
 import './AddToCartButton.css';
 
-const AddToCartButton = ({ item, showQuantity = false, className = '' }) => {
+// Accept `menuItem` (from menu) instead of generic `item`
+const AddToCartButton = ({ menuItem, showQuantity = false, className = '' }) => {
   const { addToCart, cartItems } = useCart();
   const [quantity, setQuantity] = useState(1);
   const [isAdding, setIsAdding] = useState(false);
 
-  const cartItem = cartItems.find(i => i.id === item.id);
+  //  menuItem.id to check if already in cart
+  const cartItem = cartItems.find(i => i.id === menuItem.id);
   const currentQuantity = cartItem ? cartItem.quantity : 0;
 
   const handleAddToCart = () => {
     setIsAdding(true);
-    addToCart({ ...item, quantity });
     
-    // show feedback animation
+    // Pass full menuItem data + selected quantity
+    addToCart({ 
+      id: menuItem.id,
+      name: menuItem.name,
+      price: menuItem.price,
+      quantity 
+    });
+    
+    // Show feedback animation
     setTimeout(() => {
       setIsAdding(false);
       setQuantity(1);
