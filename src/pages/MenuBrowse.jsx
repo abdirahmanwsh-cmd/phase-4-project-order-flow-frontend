@@ -1,7 +1,7 @@
 import { useEffect, useState } from 'react';
-import { getMenuItems } from '../services/menuService';
+import { getMenuItems } from '../services/menuService'; //(more specific)
 import MenuItemCard from '../components/menu/MenuItemCard';
-import './MenuBrowse.css'; 
+import './MenuBrowse.css'; //keep CSS import for styling
 
 export default function MenuBrowse() {
   const [menuItems, setMenuItems] = useState([]);

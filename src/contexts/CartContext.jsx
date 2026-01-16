@@ -14,7 +14,7 @@ export const CartProvider = ({ children }) => {
   const [cartItems, setCartItems] = useState([]);
   const [isLoading, setIsLoading] = useState(false);
 
-  // load cart from localStorage on mount
+  //load cart from localStorage on mount
   useEffect(() => {
     const savedCart = localStorage.getItem('orderflow_cart');
     if (savedCart) {
@@ -26,7 +26,7 @@ export const CartProvider = ({ children }) => {
     }
   }, []);
 
-  // save cart to localStorage whenever it changes
+  //save cart to localStorage whenever it changes
   useEffect(() => {
     localStorage.setItem('orderflow_cart', JSON.stringify(cartItems));
   }, [cartItems]);
