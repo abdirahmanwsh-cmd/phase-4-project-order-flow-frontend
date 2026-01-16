@@ -154,13 +154,6 @@ const HomePage = () => (
   </div>
 );
 
-const MenuPlaceholder = () => (
-  <div className="placeholder-page">
-    <h1>Menu</h1>
-    <p>Coming soon</p>
-  </div>
-);
-
 const OrdersPlaceholder = () => (
   <div className="placeholder-page">
     <h1>My Orders</h1>
