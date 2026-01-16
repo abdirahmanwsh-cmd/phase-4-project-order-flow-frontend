@@ -1,16 +1,17 @@
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { Routes, Route, Link } from 'react-router-dom';
 import { CartProvider, useCart } from './contexts/CartContext';
+import { useAuth } from './contexts/AuthContext';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
-import './App.css';
-
-// Import your new admin dashboard
+import Login from './components/auth/Login';
+import Register from './components/auth/Register';
 import AdminOrders from './pages/AdminOrders';
-import MenuBrowse from './pages/MenuBrowse';          // ← added
-import AdminMenuManager from './pages/AdminMenuManager'; // ← added
+import ProtectedRoute from './components/auth/ProtectedRoute';  // ← Import this
+import './App.css';
 
 function Navbar() {
   const { getCartCount } = useCart();
+  const { user, logout } = useAuth();
   const cartCount = getCartCount();
 
   return (
@@ -37,10 +38,28 @@ function Navbar() {
           <li className="nav-item">
             <Link to="/admin/orders" className="nav-link">Admin Orders</Link>
           </li>
-          {/* Optional: Add admin menu link if needed */}
-          {/* <li className="nav-item">
-            <Link to="/admin/menu" className="nav-link">Admin Menu</Link>
-          </li> */}
+
+          {user ? (
+            <li className="nav-item">
+              <button
+                onClick={logout}
+                style={{
+                  background: 'none',
+                  border: 'none',
+                  color: '#1f2937',
+                  fontWeight: '600',
+                  cursor: 'pointer',
+                  fontSize: '1rem'
+                }}
+              >
+                Logout
+              </button>
+            </li>
+          ) : (
+            <li className="nav-item">
+              <Link to="/login" className="nav-link">Login</Link>
+            </li>
+          )}
         </ul>
       </div>
     </nav>
@@ -50,28 +69,45 @@ function Navbar() {
 function App() {
   return (
     <CartProvider>
-      <Router>
-        <div className="app">
-          <Navbar />
+      <div className="app">
+        <Navbar />
 
-          <main className="main-content">
-            <Routes>
-              <Route path="/" element={<HomePage />} />
+        <main className="main-content">
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
+            <Route path="/" element={<HomePage />} />
+            <Route path="/menu" element={<MenuPlaceholder />} />
+
+            <Route element={<ProtectedRoute />}>
               <Route path="/cart" element={<Cart />} />
               <Route path="/checkout" element={<Checkout />} />
-              <Route path="/menu" element={<MenuBrowse />} /> {/* ← updated */}
               <Route path="/orders" element={<OrdersPlaceholder />} />
+            </Route>
+
+            <Route element={<ProtectedRoute requiredRoles={["admin"]} />}>
               <Route path="/admin/orders" element={<AdminOrders />} />
-              <Route path="/admin/menu" element={<AdminMenuManager />} /> {/* ← added */}
-            </Routes>
-          </main>
-        </div>
-      </Router>
+            </Route>
+
+            <Route path="/unauthorized" element={
+              <div style={{ textAlign: 'center', padding: '100px 20px' }}>
+                <h1 style={{ fontSize: '3rem', color: '#2d6a4f' }}>Access Denied</h1>
+                <p style={{ fontSize: '1.5rem', margin: '1rem 0' }}>
+                  You don't have permission to view this page.
+                </p>
+                <Link to="/" className="hero-btn" style={{ padding: '12px 24px' }}>
+                  Go Home
+                </Link>
+              </div>
+            } />
+          </Routes>
+        </main>
+      </div>
     </CartProvider>
   );
 }
 
-// temporary placeholder components
+// Temporary placeholder components (unchanged)
 const HomePage = () => (
   <div className="home-page">
     <section className="hero-section">
