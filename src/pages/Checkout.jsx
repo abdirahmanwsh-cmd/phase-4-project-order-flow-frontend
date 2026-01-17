@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
+import api from '../services/api';
 import './Checkout.css';
 
 const Checkout = () => {
@@ -16,6 +17,8 @@ const Checkout = () => {
   });
 
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState(null);
 
   const subtotal = getCartTotal();
   const deliveryFee = 100;
@@ -66,17 +69,107 @@ const Checkout = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmitOrder = (e) => {
+  const handleSubmitOrder = async (e) => {
     e.preventDefault();
 
     if (!validateForm()) {
       return;
     }
 
-    console.log('Order:', { formData, items: cartItems, total });
-    alert('Order placed successfully!');
-    clearCart();
-    navigate('/');
+    setIsSubmitting(true);
+    setPaymentStatus('creating_order');
+
+    try {
+      // Step 1: Create order
+      const orderData = {
+        customer_name: formData.fullName,
+        phone: formData.phone,
+        email: formData.email,
+        address: formData.address,
+        city: formData.city,
+        items: cartItems.map(item => ({
+          menu_item_id: item.id,
+          quantity: item.quantity,
+          price: item.price
+        })),
+        total: total
+      };
+
+      const orderResponse = await api.createOrder(orderData);
+      const orderId = orderResponse.order_id;
+
+      setPaymentStatus('initiating_payment');
+
+      // Step 2: Initiate M-Pesa payment
+      const paymentData = {
+        phone_number: formData.phone.replace(/^0/, '254'),
+        amount: Math.round(total),
+        order_id: orderId,
+        account_reference: `ORDER-${orderId}`
+      };
+
+      const paymentResponse = await api.initiateMpesaPayment(paymentData);
+
+      if (paymentResponse.success) {
+        setPaymentStatus('awaiting_payment');
+        
+        // Show M-Pesa prompt message
+        alert(`M-Pesa payment request sent to ${formData.phone}. Please enter your PIN to complete payment.`);
+
+        // Poll for payment status
+        await pollPaymentStatus(paymentResponse.checkout_request_id, orderId);
+      } else {
+        throw new Error('Failed to initiate payment');
+      }
+
+    } catch (error) {
+      console.error('Order failed:', error);
+      setPaymentStatus('error');
+      alert(error.message || 'Failed to place order. Please try again.');
+      setIsSubmitting(false);
+    }
+  };
+
+  const pollPaymentStatus = async (checkoutRequestId, orderId) => {
+    const maxAttempts = 30;
+    let attempts = 0;
+
+    const checkStatus = async () => {
+      try {
+        const statusResponse = await api.checkPaymentStatus(checkoutRequestId);
+
+        if (statusResponse.status === 'completed') {
+          setPaymentStatus('payment_success');
+          clearCart();
+          setTimeout(() => {
+            navigate(`/order-confirmation?order_id=${orderId}`);
+          }, 1500);
+          return true;
+        } else if (statusResponse.status === 'failed') {
+          setPaymentStatus('payment_failed');
+          alert('Payment failed. Please try again.');
+          setIsSubmitting(false);
+          return true;
+        }
+
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(checkStatus, 3000);
+        } else {
+          setPaymentStatus('payment_timeout');
+          alert('Payment verification timeout. Please check your order status.');
+          navigate(`/orders`);
+        }
+      } catch (error) {
+        console.error('Payment status check failed:', error);
+        attempts++;
+        if (attempts < maxAttempts) {
+          setTimeout(checkStatus, 3000);
+        }
+      }
+    };
+
+    setTimeout(checkStatus, 3000);
   };
 
   if (cartItems.length === 0) {
@@ -176,8 +269,9 @@ const Checkout = () => {
             <button 
               type="submit" 
               className="place-order-btn"
+              disabled={isSubmitting}
             >
-              Place Order - KES {total.toFixed(2)}
+              {isSubmitting ? 'Processing...' : `Place Order - KES ${total.toFixed(2)}`}
             </button>
           </form>
 
@@ -210,6 +304,49 @@ const Checkout = () => {
           </div>
         </div>
       </div>
+
+      {paymentStatus && (
+        <div className="payment-modal">
+          <div className="payment-modal-content">
+            {paymentStatus === 'creating_order' && (
+              <>
+                <div className="payment-spinner"></div>
+                <h3>Creating your order...</h3>
+                <p>Please wait</p>
+              </>
+            )}
+            {paymentStatus === 'initiating_payment' && (
+              <>
+                <div className="payment-spinner"></div>
+                <h3>Initiating M-Pesa payment...</h3>
+                <p>Please wait</p>
+              </>
+            )}
+            {paymentStatus === 'awaiting_payment' && (
+              <>
+                <div className="payment-spinner"></div>
+                <h3>Waiting for payment...</h3>
+                <p>Check your phone for M-Pesa prompt</p>
+                <p className="mpesa-instruction">Enter your M-Pesa PIN to complete payment</p>
+              </>
+            )}
+            {paymentStatus === 'payment_success' && (
+              <>
+                <div className="payment-success-icon">✓</div>
+                <h3>Payment Successful!</h3>
+                <p>Redirecting to order confirmation...</p>
+              </>
+            )}
+            {paymentStatus === 'payment_failed' && (
+              <>
+                <div className="payment-error-icon">✗</div>
+                <h3>Payment Failed</h3>
+                <p>Please try again</p>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

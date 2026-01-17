@@ -3,10 +3,11 @@ import { CartProvider, useCart } from './contexts/CartContext';
 import { useAuth } from './contexts/AuthContext';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
+import MenuBrowse from './pages/MenuBrowse';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import AdminOrders from './pages/AdminOrders';
-import ProtectedRoute from './components/auth/ProtectedRoute';  // ← Import this
+import ProtectedRoute from './components/auth/ProtectedRoute';
 import './App.css';
 
 function Navbar() {
@@ -77,7 +78,7 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/" element={<HomePage />} />
-            <Route path="/menu" element={<MenuPlaceholder />} />
+            <Route path="/menu" element={<MenuBrowse />} />
 
             <Route element={<ProtectedRoute />}>
               <Route path="/cart" element={<Cart />} />
