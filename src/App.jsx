@@ -4,6 +4,7 @@ import { useAuth } from './contexts/AuthContext';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
 import MenuBrowse from './pages/MenuBrowse';
+import Orders from './pages/Orders';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import AdminOrders from './pages/AdminOrders';
@@ -83,7 +84,7 @@ function App() {
             <Route element={<ProtectedRoute />}>
               <Route path="/cart" element={<Cart />} />
               <Route path="/checkout" element={<Checkout />} />
-              <Route path="/orders" element={<OrdersPlaceholder />} />
+              <Route path="/orders" element={<Orders />} />
             </Route>
 
             <Route element={<ProtectedRoute requiredRoles={["admin"]} />}>
@@ -155,11 +156,6 @@ const HomePage = () => (
   </div>
 );
 
-const OrdersPlaceholder = () => (
-  <div className="placeholder-page">
-    <h1>My Orders</h1>
-    <p>Coming soon</p>
-  </div>
-);
+
 
 export default App;
