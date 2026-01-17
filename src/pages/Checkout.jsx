@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
+import api from '../services/api';
 import './Checkout.css';
 
 const Checkout = () => {
@@ -16,6 +17,11 @@ const Checkout = () => {
   });
 
   const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [paymentStatus, setPaymentStatus] = useState(null); // null, 'creating_order', 'initiating_payment', 'awaiting_payment', 'payment_success', 'payment_failed', 'manual_confirmation'
+  const [paymentMessage, setPaymentMessage] = useState('');
+  const [orderId, setOrderId] = useState(null);
+  const [manualPhoneNumber, setManualPhoneNumber] = useState('');
 
   const subtotal = getCartTotal();
   const deliveryFee = 100;
@@ -66,17 +72,175 @@ const Checkout = () => {
     return Object.keys(newErrors).length === 0;
   };
 
-  const handleSubmitOrder = (e) => {
+  const handleSubmitOrder = async (e) => {
     e.preventDefault();
+    console.log('Submit button clicked!');
+    console.log('Form data:', formData);
 
     if (!validateForm()) {
+      console.log('Form validation failed!', errors);
       return;
     }
 
-    console.log('Order:', { formData, items: cartItems, total });
-    alert('Order placed successfully!');
-    clearCart();
-    navigate('/');
+    console.log('Form validation passed, starting order process...');
+    setIsSubmitting(true);
+    setPaymentStatus('creating_order');
+    setPaymentMessage('Creating your order...');
+
+    try {
+      // Step 1: Create order in backend
+      const orderData = {
+        customer_name: formData.fullName,
+        phone: formData.phone,
+        email: formData.email,
+        delivery_address: `${formData.address}, ${formData.city}`,
+        items: cartItems.map(item => ({
+          menu_item_id: item.id,
+          quantity: item.quantity,
+          price: item.price
+        })),
+        total_amount: total
+      };
+
+      console.log('Creating order:', orderData);
+      const orderResponse = await api.createOrder(orderData);
+      const createdOrderId = orderResponse.id || orderResponse.order_id;
+      setOrderId(createdOrderId);
+      console.log('Order created:', orderResponse);
+
+      // Step 2: Initiate M-Pesa payment
+      setPaymentStatus('initiating_payment');
+      setPaymentMessage('Initiating M-Pesa payment...');
+
+      // Format phone number (remove leading 0, add 254)
+      let phoneNumber = formData.phone.replace(/\s/g, '');
+      if (phoneNumber.startsWith('0')) {
+        phoneNumber = '254' + phoneNumber.slice(1);
+      } else if (!phoneNumber.startsWith('254')) {
+        phoneNumber = '254' + phoneNumber;
+      }
+
+      const paymentData = {
+        phone_number: phoneNumber,
+        amount: total,
+        order_id: createdOrderId,
+        account_reference: `ORDER-${createdOrderId}`
+      };
+
+      console.log('Initiating M-Pesa payment:', paymentData);
+      const paymentResponse = await api.initiateMpesaPayment(paymentData);
+      console.log('Full M-Pesa response:', paymentResponse);
+      console.log('Response keys:', Object.keys(paymentResponse));
+      
+      const checkoutRequestId = paymentResponse.checkout_request_id 
+        || paymentResponse.CheckoutRequestID 
+        || paymentResponse.checkoutRequestId
+        || paymentResponse.transaction_id
+        || paymentResponse.id;
+      
+      console.log('Extracted checkout request ID:', checkoutRequestId);
+      
+      if (!checkoutRequestId) {
+        console.error('Could not find checkout ID in response:', paymentResponse);
+        throw new Error('No checkout request ID received from M-Pesa. Response: ' + JSON.stringify(paymentResponse));
+      }
+      
+      console.log('M-Pesa payment initiated with ID:', checkoutRequestId);
+
+      // Step 3: Show waiting message and poll for payment status
+      setPaymentStatus('awaiting_payment');
+      setPaymentMessage('Check your phone for M-Pesa prompt. Enter your PIN to complete payment.');
+
+      // Poll payment status
+      await pollPaymentStatus(checkoutRequestId, createdOrderId);
+
+    } catch (error) {
+      console.error('Order/Payment failed:', error);
+      setPaymentStatus('payment_failed');
+      setPaymentMessage(error.message || 'Failed to process order. Please try again.');
+      setIsSubmitting(false);
+    }
+  };
+
+  const pollPaymentStatus = async (checkoutRequestId, orderId) => {
+    const maxAttempts = 30; // 30 attempts = 90 seconds
+    const pollInterval = 3000; // 3 seconds
+    let attempts = 0;
+
+    // After 15 seconds (5 attempts), show manual confirmation option
+    setTimeout(() => {
+      if (paymentStatus === 'awaiting_payment') {
+        setPaymentStatus('manual_confirmation');
+        setPaymentMessage('Please input your phone number so we can confirm');
+      }
+    }, 15000);
+
+    // After 35 seconds total (15 + 20), show contact staff message
+    setTimeout(() => {
+      if (paymentStatus === 'manual_confirmation') {
+        setPaymentMessage('Please contact the staff if an error has occurred');
+      }
+    }, 35000);
+
+    const checkStatus = async () => {
+      try {
+        attempts++;
+        console.log(`Polling payment status (attempt ${attempts}/${maxAttempts}) for checkout ID:`, checkoutRequestId);
+        
+        const statusResponse = await api.checkPaymentStatus(checkoutRequestId);
+        console.log('Full payment status response:', statusResponse);
+        console.log('Status response keys:', Object.keys(statusResponse));
+
+        const status = statusResponse.status 
+          || statusResponse.ResultCode 
+          || statusResponse.result_code
+          || statusResponse.payment_status;
+        
+        console.log('Extracted status value:', status, 'Type:', typeof status);
+
+        if (status === 'completed' || status === 'success' || status === '0' || status === 0 || status === 'Success') {
+          // Payment successful
+          console.log('Payment detected as successful!');
+          setPaymentStatus('payment_success');
+          setPaymentMessage('Payment successful! Redirecting...');
+          clearCart();
+          
+          setTimeout(() => {
+            navigate('/orders');
+          }, 2000);
+          return;
+        } else if (status === 'failed' || status === 'Failed' || status === '1' || status === 1) {
+          // Payment failed
+          console.log('Payment detected as failed');
+          setPaymentStatus('payment_failed');
+          setPaymentMessage('Payment failed. Please try again.');
+          setIsSubmitting(false);
+          return;
+        }
+
+        // Payment still pending
+        if (attempts < maxAttempts) {
+          setTimeout(checkStatus, pollInterval);
+        } else {
+          // Timeout
+          setPaymentStatus('payment_failed');
+          setPaymentMessage('Payment timeout. Please check your order status.');
+          setIsSubmitting(false);
+        }
+      } catch (error) {
+        console.error('Status check error:', error);
+        if (attempts < maxAttempts) {
+          setTimeout(checkStatus, pollInterval);
+        } else {
+          setPaymentStatus('payment_failed');
+          setPaymentMessage('Unable to verify payment. Please check your order status.');
+          setIsSubmitting(false);
+        }
+      }
+    };
+
+    // Start polling after 3 seconds (give time for STK push)
+    setTimeout(checkStatus, 3000);
   };
 
   if (cartItems.length === 0) {
@@ -176,8 +340,9 @@ const Checkout = () => {
             <button 
               type="submit" 
               className="place-order-btn"
+              disabled={isSubmitting}
             >
-              Place Order - KES {total.toFixed(2)}
+              {isSubmitting ? 'Placing Order...' : `Place Order - KES ${total.toFixed(2)}`}
             </button>
           </form>
 
@@ -210,6 +375,93 @@ const Checkout = () => {
           </div>
         </div>
       </div>
+
+      {/* M-Pesa Payment Modal */}
+      {paymentStatus && (
+        <div className="payment-modal">
+          <div className="payment-modal-content">
+            {paymentStatus === 'creating_order' && (
+              <>
+                <div className="payment-spinner"></div>
+                <h3>Creating Order</h3>
+                <p>{paymentMessage}</p>
+              </>
+            )}
+
+            {paymentStatus === 'initiating_payment' && (
+              <>
+                <div className="payment-spinner"></div>
+                <h3>Initiating Payment</h3>
+                <p>{paymentMessage}</p>
+              </>
+            )}
+
+            {paymentStatus === 'awaiting_payment' && (
+              <>
+                <div className="payment-spinner"></div>
+                <h3>Waiting for Payment</h3>
+                <p className="payment-phone-prompt">📱 {paymentMessage}</p>
+                <p className="payment-hint">Enter your M-Pesa PIN on your phone</p>
+              </>
+            )}
+
+            {paymentStatus === 'manual_confirmation' && (
+              <>
+                <h3>Confirm Payment</h3>
+                <p className="payment-phone-prompt">{paymentMessage}</p>
+                <input
+                  type="tel"
+                  placeholder="Enter phone number (0712345678)"
+                  value={manualPhoneNumber}
+                  onChange={(e) => setManualPhoneNumber(e.target.value)}
+                  className="manual-phone-input"
+                />
+                <button
+                  onClick={() => {
+                    console.log('Manual payment confirmation with phone:', manualPhoneNumber);
+                    setPaymentStatus('payment_success');
+                    setPaymentMessage('Thank you!');
+                    clearCart();
+                    setTimeout(() => {
+                      navigate('/menu');
+                    }, 2000);
+                  }}
+                  className="manual-confirm-btn"
+                  disabled={!manualPhoneNumber || manualPhoneNumber.length < 10}
+                >
+                  Confirm Payment
+                </button>
+              </>
+            )}
+
+            {paymentStatus === 'payment_success' && (
+              <>
+                <div className="payment-success-icon">✓</div>
+                <h3>Payment Successful!</h3>
+                <p>{paymentMessage}</p>
+                {orderId && <p className="order-id">Order #{orderId}</p>}
+              </>
+            )}
+
+            {paymentStatus === 'payment_failed' && (
+              <>
+                <div className="payment-error-icon">✗</div>
+                <h3>Payment Failed</h3>
+                <p>{paymentMessage}</p>
+                <button 
+                  onClick={() => {
+                    setPaymentStatus(null);
+                    setIsSubmitting(false);
+                  }}
+                  className="retry-payment-btn"
+                >
+                  Try Again
+                </button>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };

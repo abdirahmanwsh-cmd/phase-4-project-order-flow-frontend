@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5000/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5555/api';
 
 class ApiService {
   constructor() {
@@ -23,7 +23,8 @@ class ApiService {
       const data = await response.json();
 
       if (!response.ok) {
-        throw new Error(data.message || 'Something went wrong');
+        console.error('API Error Response:', data);
+        throw new Error(data.message || data.error || JSON.stringify(data) || 'Something went wrong');
       }
 
       return data;
