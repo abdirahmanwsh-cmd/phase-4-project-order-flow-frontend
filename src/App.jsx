@@ -3,10 +3,11 @@ import { CartProvider, useCart } from './contexts/CartContext';
 import { useAuth } from './contexts/AuthContext';
 import Cart from './pages/Cart';
 import Checkout from './pages/Checkout';
+import MenuBrowse from './pages/MenuBrowse';
 import Login from './components/auth/Login';
 import Register from './components/auth/Register';
 import AdminOrders from './pages/AdminOrders';
-import ProtectedRoute from './components/auth/ProtectedRoute';  // ← Import this
+import ProtectedRoute from './components/auth/ProtectedRoute';
 import './App.css';
 
 function Navbar() {
@@ -77,12 +78,13 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
             <Route path="/" element={<HomePage />} />
-            <Route path="/menu" element={<MenuPlaceholder />} />
+            <Route path="/menu" element={<MenuBrowse />} />
 
             <Route element={<ProtectedRoute />}>
               <Route path="/cart" element={<Cart />} />
               <Route path="/checkout" element={<Checkout />} />
               <Route path="/orders" element={<OrdersPlaceholder />} />
+              <Route path="/order-confirmation" element={<OrderConfirmationPlaceholder />} />
             </Route>
 
             <Route element={<ProtectedRoute requiredRoles={["admin"]} />}>
@@ -158,6 +160,13 @@ const OrdersPlaceholder = () => (
   <div className="placeholder-page">
     <h1>My Orders</h1>
     <p>Coming soon</p>
+  </div>
+);
+
+const OrderConfirmationPlaceholder = () => (
+  <div className="placeholder-page">
+    <h1>Order Confirmed!</h1>
+    <p>Your order has been placed successfully. You will receive a confirmation shortly.</p>
   </div>
 );
 
