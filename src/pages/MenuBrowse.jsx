@@ -27,11 +27,20 @@ export default function MenuBrowse() {
     }
   };
 
-  const categories = ['all', ...new Set(menuItems.map(item => item.category))];
+  const categories = ['all', ...new Set(menuItems.map(item => item.category).filter(Boolean))];
   
   const filteredItems = selectedCategory === 'all' 
     ? menuItems 
     : menuItems.filter(item => item.category === selectedCategory);
+
+  // Generate food image URL based on item name
+  const getFoodImage = (item) => {
+    if (item.image_url) return item.image_url;
+    
+    // Use Unsplash API with food name as search query
+    const searchTerm = encodeURIComponent(item.name || item.category || 'food');
+    return `https://source.unsplash.com/400x300/?${searchTerm},food`;
+  };
 
   if (loading) {
     return (
@@ -78,11 +87,11 @@ export default function MenuBrowse() {
       </div>
 
       <div className="menu-grid">
-        {filteredItems.map(item => (
+        {filteredItems.map((item, index) => (
           <div key={item.id} className="menu-item-card">
             <div className="menu-item-image">
               <img 
-                src={item.image_url || 'https://images.unsplash.com/photo-1546069901-ba9599a7e63c?w=400&h=300&fit=crop'} 
+                src={getFoodImage(item)} 
                 alt={item.name}
               />
               {item.is_available === false && (
@@ -95,7 +104,7 @@ export default function MenuBrowse() {
               <div className="menu-item-footer">
                 <span className="menu-item-price">KES {item.price}</span>
                 <AddToCartButton 
-                  item={item} 
+                  menuItem={item} 
                   disabled={item.is_available === false}
                 />
               </div>

@@ -11,20 +11,20 @@ export const useCart = () => {
 };
 
 export const CartProvider = ({ children }) => {
-  const [cartItems, setCartItems] = useState([]);
-  const [isLoading, setIsLoading] = useState(false);
-
-  //load cart from localStorage on mount
-  useEffect(() => {
+  // Initialize from localStorage directly to avoid race condition
+  const [cartItems, setCartItems] = useState(() => {
     const savedCart = localStorage.getItem('orderflow_cart');
     if (savedCart) {
       try {
-        setCartItems(JSON.parse(savedCart));
+        return JSON.parse(savedCart);
       } catch (error) {
         console.error('Failed to load cart:', error);
+        return [];
       }
     }
-  }, []);
+    return [];
+  });
+  const [isLoading, setIsLoading] = useState(false);
 
   //save cart to localStorage whenever it changes
   useEffect(() => {
