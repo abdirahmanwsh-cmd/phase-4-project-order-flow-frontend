@@ -123,26 +123,26 @@ const HomePage = () => (
     <section className="features-section">
       <h2>Popular Categories</h2>
       <div className="category-grid">
-        <div className="category-card">
+        <Link to="/menu" className="category-card">
           <img src="https://images.unsplash.com/photo-1525351484163-7529414344d8?w=400&h=300&fit=crop" alt="Breakfast" className="category-image" />
           <h3>Breakfast</h3>
           <p>Start your day right</p>
-        </div>
-        <div className="category-card">
+        </Link>
+        <Link to="/menu" className="category-card">
           <img src="https://images.unsplash.com/photo-1504674900247-0877df9cc836?w=400&h=300&fit=crop" alt="Lunch" className="category-image" />
           <h3>Lunch</h3>
           <p>Hearty midday meals</p>
-        </div>
-        <div className="category-card">
+        </Link>
+        <Link to="/menu" className="category-card">
           <img src="https://images.unsplash.com/photo-1476224203421-9ac39bcb3327?w=400&h=300&fit=crop" alt="Dinner" className="category-image" />
           <h3>Dinner</h3>
           <p>Evening delights</p>
-        </div>
-        <div className="category-card">
+        </Link>
+        <Link to="/menu" className="category-card">
           <img src="https://images.unsplash.com/photo-1551024506-0bccd828d307?w=400&h=300&fit=crop" alt="Desserts" className="category-image" />
           <h3>Desserts</h3>
           <p>Sweet treats & more</p>
-        </div>
+        </Link>
       </div>
     </section>
 

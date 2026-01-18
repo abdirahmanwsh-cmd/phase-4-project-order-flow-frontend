@@ -1,20 +1,38 @@
 import { useNavigate } from 'react-router-dom';
 import { useCart } from '../contexts/CartContext';
 import CartItem from '../components/cart/CartItem';
+import { useState, useEffect } from 'react';
+import api from '../services/api';
+import AddToCartButton from '../components/cart/AddToCartButton';
 import './Cart.css';
 
 const Cart = () => {
   const navigate = useNavigate();
   const { cartItems, clearCart, getCartTotal, getCartCount } = useCart();
+  const [suggestedItems, setSuggestedItems] = useState([]);
 
   const total = getCartTotal();
-
-  const suggestedItems = [
-    { id: 101, name: 'Garlic Bread', price: 350, image: '🥖' },
-    { id: 102, name: 'Side Salad', price: 400, image: '🥗' },
-    { id: 103, name: 'Soft Drink', price: 150, image: '🥤' }
-  ];
   const itemCount = getCartCount();
+
+  useEffect(() => {
+    // Fetch random menu items for suggestions
+    const fetchSuggestions = async () => {
+      try {
+        const menuItems = await api.getMenuItems();
+        // Get 3 random items that aren't already in cart
+        const cartIds = cartItems.map(item => item.id);
+        const available = menuItems.filter(item => !cartIds.includes(item.id));
+        const random = available.sort(() => 0.5 - Math.random()).slice(0, 3);
+        setSuggestedItems(random);
+      } catch (error) {
+        console.error('Failed to fetch suggestions:', error);
+      }
+    };
+    
+    if (cartItems.length > 0) {
+      fetchSuggestions();
+    }
+  }, [cartItems]);
 
   if (cartItems.length === 0) {
     return (
@@ -84,16 +102,22 @@ const Cart = () => {
           </div>
         </div>
 
-        {cartItems.length > 0 && (
+        {cartItems.length > 0 && suggestedItems.length > 0 && (
           <div className="suggested-items">
             <h3>You might also like</h3>
             <div className="suggested-grid">
               {suggestedItems.map(item => (
                 <div key={item.id} className="suggested-item">
-                  <div className="suggested-image">{item.image}</div>
+                  <div className="suggested-image">
+                    <img 
+                      src={item.image_url || `https://source.unsplash.com/200x150/?${encodeURIComponent(item.name)},food`} 
+                      alt={item.name}
+                      style={{ width: '100%', height: '150px', objectFit: 'cover', borderRadius: '8px' }}
+                    />
+                  </div>
                   <h4>{item.name}</h4>
                   <p className="suggested-price">KES {item.price.toFixed(2)}</p>
-                  <button className="add-suggested-btn">Add to Cart</button>
+                  <AddToCartButton menuItem={item} />
                 </div>
               ))}
             </div>
