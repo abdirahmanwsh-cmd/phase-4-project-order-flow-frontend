@@ -147,12 +147,15 @@ const Checkout = () => {
       
       console.log('M-Pesa payment initiated with ID:', checkoutRequestId);
 
-      // Step 3: Show waiting message and poll for payment status
+      // Step 3: Show waiting message and ask for manual confirmation after 5 seconds
       setPaymentStatus('awaiting_payment');
       setPaymentMessage('Check your phone for M-Pesa prompt. Enter your PIN to complete payment.');
 
-      // Poll payment status
-      await pollPaymentStatus(checkoutRequestId, createdOrderId);
+      // After 5 seconds, ask for manual confirmation
+      setTimeout(() => {
+        setPaymentStatus('manual_confirmation');
+        setPaymentMessage('Please enter your phone number to confirm payment');
+      }, 5000);
 
     } catch (error) {
       console.error('Order/Payment failed:', error);
@@ -163,44 +166,76 @@ const Checkout = () => {
   };
 
   const pollPaymentStatus = async (checkoutRequestId, orderId) => {
-    const maxAttempts = 30; // 30 attempts = 90 seconds
+    const maxAttempts = 60; // 60 attempts = 3 minutes
     const pollInterval = 3000; // 3 seconds
     let attempts = 0;
-
-    // After 15 seconds (5 attempts), show manual confirmation option
-    setTimeout(() => {
-      if (paymentStatus === 'awaiting_payment') {
-        setPaymentStatus('manual_confirmation');
-        setPaymentMessage('Please input your phone number so we can confirm');
-      }
-    }, 15000);
-
-    // After 35 seconds total (15 + 20), show contact staff message
-    setTimeout(() => {
-      if (paymentStatus === 'manual_confirmation') {
-        setPaymentMessage('Please contact the staff if an error has occurred');
-      }
-    }, 35000);
 
     const checkStatus = async () => {
       try {
         attempts++;
-        console.log(`Polling payment status (attempt ${attempts}/${maxAttempts}) for checkout ID:`, checkoutRequestId);
+        console.log(`\n=== PAYMENT STATUS CHECK #${attempts}/${maxAttempts} ===`);
+        console.log('CheckoutRequestID:', checkoutRequestId);
         
         const statusResponse = await api.checkPaymentStatus(checkoutRequestId);
-        console.log('Full payment status response:', statusResponse);
-        console.log('Status response keys:', Object.keys(statusResponse));
+        
+        console.log('📦 FULL RESPONSE:', statusResponse);
+        console.log('🔑 Response Keys:', Object.keys(statusResponse));
+        console.log('📄 JSON Structure:\n', JSON.stringify(statusResponse, null, 2));
 
+        // Check multiple possible status locations and formats
         const status = statusResponse.status 
           || statusResponse.ResultCode 
           || statusResponse.result_code
-          || statusResponse.payment_status;
+          || statusResponse.payment_status
+          || statusResponse?.data?.status
+          || statusResponse?.data?.ResultCode
+          || statusResponse?.data?.result_code;
         
-        console.log('Extracted status value:', status, 'Type:', typeof status);
+        console.log('✅ Extracted status value:', status, '| Type:', typeof status);
+        console.log('🔍 Checking against success values: completed, success, SUCCESS, paid, PAID, 0, "0"');
+        console.log('🔍 Checking against failure values: failed, FAILED, cancelled, 1, "1"');
+        
+        // Check for backend/API errors
+        if (statusResponse.error) {
+          console.warn('⚠️ Backend error detected:', statusResponse.error);
+          
+          // Check if it's an M-Pesa configuration error
+          if (statusResponse.error.includes('403') || 
+              statusResponse.error.includes('Forbidden') ||
+              statusResponse.error.includes('access token') ||
+              statusResponse.result_code === '2001' ||
+              statusResponse.mpesa_response?.ResultCode === '2001') {
+            console.error('❌ M-PESA CONFIGURATION ERROR - Backend cannot access Safaricom API');
+            setPaymentStatus('payment_failed');
+            setPaymentMessage('Payment system configuration error. Please contact support or try again later.');
+            setIsSubmitting(false);
+            return;
+          }
+          
+          // For rate limiting (429), continue polling
+          if (statusResponse.error.includes('429') || statusResponse.error.includes('Too Many Requests')) {
+            console.warn('⚠️ Rate limited by Safaricom, will retry...');
+          }
+        }
 
-        if (status === 'completed' || status === 'success' || status === '0' || status === 0 || status === 'Success') {
+        if (
+          status === 'completed' || 
+          status === 'success' || 
+          status === 'Success' ||
+          status === 'COMPLETED' ||
+          status === 'SUCCESS' ||
+          status === 'paid' ||
+          status === 'PAID' ||
+          status === '0' || 
+          status === 0 ||
+          statusResponse?.ResultCode === '0' ||
+          statusResponse?.ResultCode === 0 ||
+          statusResponse?.data?.ResultCode === '0' ||
+          statusResponse?.data?.ResultCode === 0
+        ) {
           // Payment successful
-          console.log('Payment detected as successful!');
+          console.log('✅ ✅ ✅ PAYMENT SUCCESS DETECTED! ✅ ✅ ✅');
+          console.log('Status matched:', status);
           setPaymentStatus('payment_success');
           setPaymentMessage('Payment successful! Redirecting...');
           clearCart();
@@ -209,29 +244,60 @@ const Checkout = () => {
             navigate('/orders');
           }, 2000);
           return;
-        } else if (status === 'failed' || status === 'Failed' || status === '1' || status === 1) {
-          // Payment failed
-          console.log('Payment detected as failed');
+        } else if (
+          status === 'failed' || 
+          status === 'Failed' || 
+          status === 'FAILED' ||
+          status === 'cancelled' ||
+          status === 'canceled' ||
+          status === 'CANCELLED' ||
+          status === 'CANCELED' ||
+          status === 'insufficient_funds' ||
+          status === '1' || 
+          status === 1 ||
+          statusResponse?.ResultCode === '1' ||
+          statusResponse?.ResultCode === 1 ||
+          statusResponse?.data?.ResultCode === '1' ||
+          statusResponse?.data?.ResultCode === 1
+        ) {
+          // Payment failed or cancelled
+          console.log('❌ ❌ ❌ PAYMENT FAILURE DETECTED! ❌ ❌ ❌');
+          console.log('Status matched:', status);
+          console.log('ResultDesc:', statusResponse?.ResultDesc || statusResponse?.data?.ResultDesc);
           setPaymentStatus('payment_failed');
-          setPaymentMessage('Payment failed. Please try again.');
+          
+          // Provide specific error messages
+          if (status?.includes('insufficient') || statusResponse?.ResultDesc?.includes('insufficient')) {
+            setPaymentMessage('Insufficient funds. Please ensure you have enough money and try again.');
+          } else if (status?.includes('cancel')) {
+            setPaymentMessage('Payment cancelled. Click "Try Again" to retry.');
+          } else {
+            setPaymentMessage('Payment failed. Please try again or use a different number.');
+          }
+          
           setIsSubmitting(false);
           return;
         }
 
         // Payment still pending
+        console.log('⏳ Payment still pending, will retry...');
         if (attempts < maxAttempts) {
           setTimeout(checkStatus, pollInterval);
         } else {
           // Timeout
+          console.log('⏱️ TIMEOUT: Max attempts reached without success/failure');
           setPaymentStatus('payment_failed');
           setPaymentMessage('Payment timeout. Please check your order status.');
           setIsSubmitting(false);
         }
       } catch (error) {
-        console.error('Status check error:', error);
+        console.error('❌ Status check error:', error);
+        console.error('Error details:', error.message);
         if (attempts < maxAttempts) {
+          console.log('Will retry after error...');
           setTimeout(checkStatus, pollInterval);
         } else {
+          console.log('Max retries reached after errors');
           setPaymentStatus('payment_failed');
           setPaymentMessage('Unable to verify payment. Please check your order status.');
           setIsSubmitting(false);
@@ -420,10 +486,10 @@ const Checkout = () => {
                   onClick={() => {
                     console.log('Manual payment confirmation with phone:', manualPhoneNumber);
                     setPaymentStatus('payment_success');
-                    setPaymentMessage('Thank you!');
+                    setPaymentMessage('Payment confirmed! Redirecting...');
                     clearCart();
                     setTimeout(() => {
-                      navigate('/menu');
+                      navigate('/orders');
                     }, 2000);
                   }}
                   className="manual-confirm-btn"
@@ -448,15 +514,27 @@ const Checkout = () => {
                 <div className="payment-error-icon">✗</div>
                 <h3>Payment Failed</h3>
                 <p>{paymentMessage}</p>
-                <button 
-                  onClick={() => {
-                    setPaymentStatus(null);
-                    setIsSubmitting(false);
-                  }}
-                  className="retry-payment-btn"
-                >
-                  Try Again
-                </button>
+                <div className="payment-failed-actions">
+                  <button 
+                    onClick={() => {
+                      setPaymentStatus(null);
+                      setIsSubmitting(false);
+                    }}
+                    className="retry-payment-btn"
+                  >
+                    Try Again
+                  </button>
+                  <button 
+                    onClick={() => {
+                      setPaymentStatus(null);
+                      setIsSubmitting(false);
+                      navigate('/menu');
+                    }}
+                    className="cancel-order-btn"
+                  >
+                    Back to Menu
+                  </button>
+                </div>
               </>
             )}
           </div>
