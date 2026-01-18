@@ -466,6 +466,32 @@
   box-shadow: 0 4px 12px rgba(45, 106, 79, 0.3);
 }
 
+.payment-failed-actions {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.cancel-order-btn {
+  padding: 1rem 2.5rem;
+  background: #6b7280;
+  color: white;
+  border: none;
+  border-radius: 10px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s;
+}
+
+.cancel-order-btn:hover {
+  background: #4b5563;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(107, 114, 128, 0.3);
+}
+
 .manual-phone-input {
   width: 100%;
   padding: 1rem;
