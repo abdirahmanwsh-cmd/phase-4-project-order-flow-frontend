@@ -1,24 +1,11 @@
-import React, { useEffect, useState } from "react";
+import React from "react";
 import AdminOrderCard from "./AdminOrderCard";
+import { useOrders } from "../contexts/OrdersContext";
 
 const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5555/api';
 
 const AdminOrders = () => {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    fetch(`${API_BASE_URL}/orders`)
-      .then((res) => res.json())
-      .then((data) => {
-        setOrders(data.orders || []);
-        setLoading(false);
-      })
-      .catch((err) => {
-        console.error("Error fetching orders:", err);
-        setLoading(false);
-      });
-  }, []);
+  const { orders, loading, deleteOrder, updateOrderStatus } = useOrders();
 
   const updateStatus = async (orderId, newStatus) => {
     try {
@@ -32,12 +19,8 @@ const AdminOrders = () => {
 
       const data = await res.json();
       if (res.ok) {
-        // Update local UI
-        setOrders((prev) =>
-          prev.map((order) =>
-            order.id === orderId ? { ...order, status: newStatus } : order
-          )
-        );
+        // Update shared context
+        updateOrderStatus(orderId, newStatus);
       } else {
         console.error("Failed to update status:", data);
       }
@@ -66,6 +49,7 @@ const AdminOrders = () => {
           key={order.id}
           order={order}
           onStatusChange={updateStatus}
+          onDelete={deleteOrder}
         />
       ))}
     </div>

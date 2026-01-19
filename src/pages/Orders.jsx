@@ -1,33 +1,8 @@
-import { useState, useEffect } from 'react';
-import api from '../services/api';
+import { useOrders } from '../contexts/OrdersContext';
 import './Orders.css';
 
 export default function Orders() {
-  const [orders, setOrders] = useState([]);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState(null);
-
-  useEffect(() => {
-    fetchOrders();
-  }, []);
-
-  const fetchOrders = async () => {
-    try {
-      setLoading(true);
-      const data = await api.getOrders();
-      console.log('Raw orders data from backend:', data);
-      // Handle both array and object responses
-      const ordersArray = Array.isArray(data) ? data : (data.orders || []);
-      console.log('Processed orders array:', ordersArray);
-      setOrders(ordersArray);
-      setError(null);
-    } catch (err) {
-      setError('Failed to load orders');
-      console.error('Orders fetch error:', err);
-    } finally {
-      setLoading(false);
-    }
-  };
+  const { orders, loading, error, fetchOrders } = useOrders();
 
   const getStatusBadgeClass = (status) => {
     const statusMap = {

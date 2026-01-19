@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 
-const AdminOrderCard = ({ order, onStatusChange }) => {
+const AdminOrderCard = ({ order, onStatusChange, onDelete }) => {
   if (!order) return null;
 
   const [status, setStatus] = useState(order.status || "pending");
@@ -36,20 +36,39 @@ const AdminOrderCard = ({ order, onStatusChange }) => {
       >
         <h3 style={{ margin: 0 }}>Order #{order.id}</h3>
 
-        <select
-          value={status}
-          onChange={handleStatusChange}
-          style={{
-            padding: "6px",
-            borderRadius: "6px",
-            border: "1px solid #ccc",
-          }}
-        >
-          <option value="pending">Pending</option>
-          <option value="ready">Ready</option>
-          <option value="delivered">Delivered</option>
-          <option value="cancelled">Cancelled</option>
-        </select>
+        <div style={{ display: "flex", gap: "8px", alignItems: "center" }}>
+          <select
+            value={status}
+            onChange={handleStatusChange}
+            style={{
+              padding: "6px",
+              borderRadius: "6px",
+              border: "1px solid #ccc",
+            }}
+          >
+            <option value="pending">Pending</option>
+            <option value="ready">Ready</option>
+            <option value="delivered">Delivered</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+
+          <button
+            onClick={() => onDelete && onDelete(order.id)}
+            style={{
+              padding: "6px 12px",
+              borderRadius: "6px",
+              border: "none",
+              backgroundColor: "#ef4444",
+              color: "white",
+              cursor: "pointer",
+              fontWeight: "500",
+            }}
+            onMouseOver={(e) => e.target.style.backgroundColor = "#dc2626"}
+            onMouseOut={(e) => e.target.style.backgroundColor = "#ef4444"}
+          >
+            Delete
+          </button>
+        </div>
       </div>
 
       <p>

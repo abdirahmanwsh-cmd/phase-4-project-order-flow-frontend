@@ -57,14 +57,19 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (username, email, password) => {
     try {
-      await axios.post(`${API_BASE_URL}/auth/register`, {
+      console.log('Attempting registration to:', `${API_BASE_URL}/auth/register`);
+      const response = await axios.post(`${API_BASE_URL}/auth/register`, {
         username,
         email,
         password,
+      }, {
+        timeout: 10000 // 10 second timeout
       });
+      console.log('Registration successful:', response.data);
       return true;
     } catch (err) {
       console.error('Registration error:', err);
+      console.error('Error details:', err.response?.data || err.message);
       return false;
     }
   };

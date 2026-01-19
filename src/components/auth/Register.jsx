@@ -19,17 +19,25 @@ export default function Register() {
     setSuccess('');
     setLoading(true);
 
-    const success = await register(username, email, password);
+    console.log('Submitting registration for:', { username, email });
 
-    setLoading(false);
+    try {
+      const success = await register(username, email, password);
 
-    if (success) {
-      setSuccess('Registration successful! Redirecting to login...');
-      setTimeout(() => {
-        navigate('/login');
-      }, 2000); // 2-second delay so user sees success message
-    } else {
-      setError('Registration failed. Username or email may already exist.');
+      setLoading(false);
+
+      if (success) {
+        setSuccess('Registration successful! Redirecting to login...');
+        setTimeout(() => {
+          navigate('/login');
+        }, 2000);
+      } else {
+        setError('Registration failed. Check console for details or try again.');
+      }
+    } catch (err) {
+      setLoading(false);
+      setError('Network error. Please check if the backend is running.');
+      console.error('Registration submission error:', err);
     }
   };
 
