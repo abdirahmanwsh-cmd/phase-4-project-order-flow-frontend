@@ -1,12 +1,14 @@
 import React, { useEffect, useState } from "react";
 import AdminOrderCard from "./AdminOrderCard";
 
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5555/api';
+
 const AdminOrders = () => {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch("http://127.0.0.1:5555/api/orders")
+    fetch(`${API_BASE_URL}/orders`)
       .then((res) => res.json())
       .then((data) => {
         setOrders(data.orders || []);
@@ -20,7 +22,7 @@ const AdminOrders = () => {
 
   const updateStatus = async (orderId, newStatus) => {
     try {
-      const res = await fetch(`http://127.0.0.1:5555/api/orders/${orderId}/status`, {
+      const res = await fetch(`${API_BASE_URL}/orders/${orderId}/status`, {
         method: "PATCH",
         headers: {
           "Content-Type": "application/json"

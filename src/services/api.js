@@ -1,4 +1,4 @@
-const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5555/api';
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'https://phase-4-project-order-flow-backend.onrender.com/api';
 
 class ApiService {
   constructor() {

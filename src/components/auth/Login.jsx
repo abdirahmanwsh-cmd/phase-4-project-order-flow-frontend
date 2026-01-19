@@ -16,13 +16,17 @@ export default function Login() {
     setError('');
     setLoading(true);
 
+    console.log('Attempting login with email:', email);
     const success = await login(email, password);
+    console.log('Login result:', success);
 
     setLoading(false);
 
     if (success) {
+      console.log('Login successful, navigating to home');
       navigate('/');
     } else {
+      console.log('Login failed');
       setError('Invalid email or password. Please try again.');
     }
   };

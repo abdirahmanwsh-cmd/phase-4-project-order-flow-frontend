@@ -3,6 +3,7 @@ import axios from 'axios';
 import {jwtDecode} from 'jwt-decode';
 
 const AuthContext = createContext();
+const API_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:5555/api';
 
 export const AuthProvider = ({ children }) => {
   const [user, setUser] = useState(null);
@@ -31,7 +32,7 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
-      const res = await axios.post('http://127.0.0.1:5555/api/auth/login', {
+      const res = await axios.post(`${API_BASE_URL}/auth/login`, {
         email,
         password,
       });
@@ -56,7 +57,7 @@ export const AuthProvider = ({ children }) => {
 
   const register = async (username, email, password) => {
     try {
-      await axios.post('http://127.0.0.1:5555/api/auth/register', {
+      await axios.post(`${API_BASE_URL}/auth/register`, {
         username,
         email,
         password,
